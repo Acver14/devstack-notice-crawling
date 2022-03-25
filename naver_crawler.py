@@ -28,31 +28,41 @@ driver.get(url=URL)
 
 noticeList, new_noticeList = [], []
 
-# last_height = driver.execute_script("document.body.scrollHeight")
-# time.sleep(5)
-# print(last_height)
-# while True:
-#     driver.execute_script("loadJobList();")
-#     new_height = driver.execute_script("document.body.scrollHeight")
-#     time.sleep(5)
-#     if new_height == last_height:
-#         break
-#     last_height = new_height
-#     print(new_height)
+last_height = driver.execute_script("return document.documentElement.scrollHeight")
+time.sleep(3)
+print(last_height)
+while True:
+    # driver.execute_script("loadJobList")
+    try:
+        driver.find_element_by_id('moreDiv').click()
+    except selenium.common.exceptions.ElementNotInteractableException:
+        break
+    time.sleep(3)
+    new_height = driver.execute_script("return document.documentElement.scrollHeight")
+    if new_height == last_height:
+        break
+    last_height = new_height
+    print(new_height)
     
 html = driver.page_source
 soup = BeautifulSoup(html, 'html.parser')
 
-notice_url_list = []
-
-# notice_list = soup.select('#jobListDiv > ul > li')
 notice_list = soup.find("div", class_="card_list").find_all('li')
+
+notice_url_list = []
 for notice in notice_list:
-    # print('https://recruit.navercorp.com' + notice.find('a')["href"])
+    date = notice.find('em', class_="crd_date").text
+    if '마감' in date:
+        continue
+    if '~' in date:
+        endDate = date.split('~')[1]
+    else:
+        endDate = date
+    
     notice_url_list.append({
         'link' : 'https://recruit.navercorp.com' + notice.find('a')["href"],
         'title': notice.find('strong', class_="crd_tit").text,
-        'date' : notice.find('em', class_="crd_date").text,
+        'endDate': endDate,
         'skill' : ''
         })
     
@@ -65,7 +75,7 @@ for notice in notice_url_list:
             notice['skill'] += ' ' + skill
 
 for notice in notice_url_list:
-    print(notice['title'], notice['date'], notice['link'])
+    print(notice['title'], notice['endDate'], notice['link'])
     print(notice['skill'])
     print()
 
