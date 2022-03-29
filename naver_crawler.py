@@ -15,7 +15,14 @@ from bs4 import BeautifulSoup
 
 import time
 
-stack_list = ['kubernetes', 'python', 'c++', 'shell']
+from connectDB import DevStackDB
+
+db = DevStackDB()
+skill_list = []
+row_skill_list = db.runQuery('SELECT * FROM Skill')
+for skill in row_skill_list:
+    skill_list.append(skill['skillName'])
+print(skill_list)
 
 URL = 'https://recruit.navercorp.com/naver/job/list/developer?searchSysComCd=&entTypeCd=&searchTxt='
 
