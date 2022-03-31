@@ -1,4 +1,7 @@
 import pymysql
+from dotenv import load_dotenv
+import os
+load_dotenv()
 
 connection=None
 dbCur=None
@@ -9,7 +12,7 @@ class DevStackDB:
     cur = None
     
     def __init__(self):
-        self.connection = pymysql.connect(host='devstack-notice-db.c9j6jk8y4wgv.ap-northeast-2.rds.amazonaws.com', user='admin', password='spring1234', db='Devstack',charset='utf8', port=3306)
+        self.connection = pymysql.connect(host=os.environ.get('AWS_MARIADB_HOST'), user=os.environ.get('AWS_MARIADB_USER'), password=os.environ.get('AWS_MARIADB_PASSWORD'), db='Devstack',charset='utf8', port=3306)
         self.dbCur = self.connection.cursor(pymysql.cursors.DictCursor)
         
     def runQuery(self, query):
