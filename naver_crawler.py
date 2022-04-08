@@ -14,15 +14,11 @@ from urllib.request import urlopen
 from bs4 import BeautifulSoup
 
 import time
-
+import datetime
 from connectDB import DevStackDB
 
 db = DevStackDB()
-skill_list = []
-row_skill_list = db.runQuery('SELECT * FROM Skill')
-for skill in row_skill_list:
-    skill_list.append(skill['skillName'])
-print(skill_list)
+skill_list = db.runQuery('SELECT * FROM Skill')[0]
 
 URL = 'https://recruit.navercorp.com/naver/job/list/developer?searchSysComCd=&entTypeCd=&searchTxt='
 
@@ -32,6 +28,8 @@ options.add_argument('window-size=1920,1080')
 driver = webdriver.Chrome('devstack-notice-crawling/chromedriver')
 driver.implicitly_wait(10)
 driver.get(url=URL)
+
+companyNo = db.runQuery('SELECT companyNo FROM Company WHERE companyName=\'Naver\'')[0][0]['companyNo']
 
 noticeList, new_noticeList = [], []
 
@@ -70,20 +68,34 @@ for notice in notice_list:
         'link' : 'https://recruit.navercorp.com' + notice.find('a')["href"],
         'title': notice.find('strong', class_="crd_tit").text,
         'endDate': endDate,
-        'skill' : ''
+        'skill' : []
         })
-    
+
 for notice in notice_url_list:
     html = urlopen(notice['link'])
     soup = BeautifulSoup(html, 'html.parser')
     context = soup.select_one('#content > div > div.career_detail > div.dtl_context > div.context_area').text
-    for skill in stack_list:
-        if skill.casefold() in context.casefold():
-            notice['skill'] += ' ' + skill
+    for skill in skill_list:
+        if skill['skillName'].casefold() in context.casefold():
+            notice['skill'].append(skill)
 
 for notice in notice_url_list:
-    print(notice['title'], notice['endDate'], notice['link'])
-    print(notice['skill'])
-    print()
+    if notice['skill']:
+        notice['endDate'] = datetime.datetime.strptime(notice['endDate'], '%Y.%m.%d').isoformat()
+        print(notice['title'], notice['endDate'], notice['link'])
+        print(notice['skill'])
+        print()
+        data = (notice['title'], notice['link'], notice['endDate'], companyNo)
+        query = 'INSERT INTO Notice (noticeTitle, noticeUrl, noticeEndDate, companyNo) VALUES(\'%s\', \'%s\', \'%s\', %d)' % data
+        print(query)
+        noticeNo = db.runQuery(query)[1]
+        print(noticeNo)
+        for skill in notice['skill']:
+            data = (noticeNo, skill['skillNo'])
+            query = 'INSERT INTO NoticeSkillStack (noticeNo, skillNo) VALUES(%d, %d)' % data
+            db.runQuery(query)
+db.connection.commit()
+            
 
 driver.close()
+db.close()
